@@ -1,0 +1,8 @@
+<Solution>
+  <Project Path="frontend/frontend.esproj">
+    <Build />
+    <Deploy />
+  </Project>
+  <Project Path="WebApplcationDogFoodEcom.AppHost/WebApplcationDogFoodEcom.AppHost.csproj" />
+  <Project Path="WebApplcationDogFoodEcom.Server/WebApplcationDogFoodEcom.Server.csproj" />
+</Solution>

@@ -1,0 +1,300 @@
+/* === Login screen === */
+.login-shell {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 2rem;
+  background: linear-gradient(135deg, var(--bg-gradient-start), var(--bg-gradient-end));
+}
+
+.login-card {
+  width: 100%;
+  max-width: 380px;
+  background: var(--card-bg);
+  color: var(--text-primary);
+  padding: 2.25rem 2rem;
+  border-radius: 16px;
+  box-shadow: 0 20px 60px var(--card-hover-shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.login-brand {
+  text-align: center;
+  margin-bottom: 0.5rem;
+}
+
+.login-brand h1 {
+  margin: 0.25rem 0 0.25rem;
+  font-size: 1.6rem;
+  background: linear-gradient(90deg, var(--accent-gradient-start), var(--accent-gradient-end));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.login-brand p {
+  margin: 0;
+  color: var(--text-tertiary);
+  font-size: 0.9rem;
+}
+
+.login-logo {
+  font-size: 2.25rem;
+  display: inline-block;
+}
+
+.login-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.login-field input {
+  padding: 0.65rem 0.8rem;
+  border-radius: 8px;
+  border: 1px solid var(--weather-card-border);
+  background: var(--weather-card-bg);
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.login-field input:focus {
+  border-color: var(--accent-gradient-start);
+}
+
+.login-submit {
+  margin-top: 0.5rem;
+  padding: 0.75rem 1rem;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  color: #fff;
+  background: linear-gradient(90deg, var(--accent-gradient-start), var(--accent-gradient-end));
+  transition: transform 0.1s, filter 0.15s;
+}
+
+.login-submit:hover:not(:disabled) {
+  filter: brightness(1.1);
+}
+
+.login-submit:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.login-submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.login-error {
+  padding: 0.6rem 0.8rem;
+  border-radius: 8px;
+  background: var(--error-bg);
+  border: 1px solid var(--error-border);
+  color: #fecaca;
+  font-size: 0.85rem;
+}
+
+.login-hint {
+  margin: 0.25rem 0 0;
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+}
+
+.login-hint code {
+  background: rgba(255, 255, 255, 0.08);
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+}
+
+/* === Products view === */
+.products-header {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.user-box {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.logout-btn {
+  padding: 0.45rem 0.9rem;
+  border-radius: 8px;
+  border: 1px solid var(--weather-card-border);
+  background: transparent;
+  color: var(--text-primary);
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: background 0.15s;
+}
+
+.logout-btn:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.product-search {
+  padding: 0.55rem 0.8rem;
+  border-radius: 8px;
+  border: 1px solid var(--weather-card-border);
+  background: var(--weather-card-bg);
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  min-width: 220px;
+  outline: none;
+}
+
+.product-search:focus {
+  border-color: var(--accent-gradient-start);
+}
+
+.product-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.product-card {
+  background: var(--weather-card-bg);
+  border: 1px solid var(--weather-card-border);
+  border-radius: 12px;
+  padding: 1rem 1.1rem 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.product-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 30px var(--card-hover-shadow);
+}
+
+.product-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.75rem;
+}
+
+.badge {
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 0.7rem;
+}
+
+.badge-med {
+  background: rgba(124, 146, 245, 0.18);
+  color: #a5b4fc;
+}
+
+.badge-vac {
+  background: rgba(139, 94, 207, 0.18);
+  color: #c4b5fd;
+}
+
+.product-brand {
+  color: var(--text-tertiary);
+}
+
+.product-name {
+  margin: 0;
+  font-size: 1.1rem;
+  color: var(--section-title-color);
+}
+
+.product-desc {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  line-height: 1.35;
+}
+
+.product-meta {
+  margin: 0.25rem 0 0.5rem;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.4rem 0.75rem;
+  font-size: 0.75rem;
+}
+
+.product-meta > div {
+  display: flex;
+  flex-direction: column;
+}
+
+.product-meta dt {
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 0.65rem;
+}
+
+.product-meta dd {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.product-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: auto;
+  padding-top: 0.4rem;
+  border-top: 1px solid var(--weather-card-border);
+}
+
+.product-price {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.add-btn {
+  padding: 0.5rem 0.9rem;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: #fff;
+  background: linear-gradient(90deg, var(--accent-gradient-start), var(--accent-gradient-end));
+  transition: filter 0.15s;
+}
+
+.add-btn:hover:not(:disabled) {
+  filter: brightness(1.1);
+}
+
+.add-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: var(--divider-color);
+}
+
+.empty-state {
+  text-align: center;
+  color: var(--text-tertiary);
+  padding: 2rem 0;
+}

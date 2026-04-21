@@ -1,0 +1,24 @@
+using System.Linq.Expressions;
+
+namespace WebApplcationDogFoodEcom.Server.Repositories;
+
+/// <summary>
+/// Generic, read/write repository contract. Callers commit changes via
+/// <see cref="IUnitOfWork.SaveChangesAsync"/>.
+/// </summary>
+public interface IRepository<T> where T : class
+{
+    Task<T?> GetByIdAsync(int id, CancellationToken ct = default);
+
+    Task<IReadOnlyList<T>> ListAsync(CancellationToken ct = default);
+
+    Task<IReadOnlyList<T>> FindAsync(
+        Expression<Func<T, bool>> predicate,
+        CancellationToken ct = default);
+
+    Task AddAsync(T entity, CancellationToken ct = default);
+
+    void Update(T entity);
+
+    void Remove(T entity);
+}
