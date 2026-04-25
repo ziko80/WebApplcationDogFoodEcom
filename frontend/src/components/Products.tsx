@@ -6,7 +6,7 @@ interface Product {
   name: string
   description: string
   price: number
-  category: number // 0 = Medicine, 1 = Vaccine, 2 = Accessory
+  category: number // 0=Medicine, 1=Vaccine, 2=Accessory, 3=Toys, 4=Feeding, 5=Grooming, 6=Hygiene, 7=Travel
   brand: string
   imageUrl: string
   stockQuantity: number
@@ -14,7 +14,7 @@ interface Product {
   targetCondition: string
 }
 
-type Filter = 'all' | 'medicine' | 'vaccine' | 'accessory'
+type Filter = 'all' | 'medicine' | 'vaccine' | 'accessory' | 'toys' | 'feeding' | 'grooming' | 'hygiene' | 'travel'
 
 export default function Products() {
   const [products, setProducts] = useState<Product[]>([])
@@ -43,9 +43,10 @@ export default function Products() {
   }, [])
 
   const filtered = products.filter((p) => {
-    if (filter === 'medicine' && p.category !== 0) return false
-    if (filter === 'vaccine' && p.category !== 1) return false
-    if (filter === 'accessory' && p.category !== 2) return false
+    const categoryMap: Record<Exclude<Filter, 'all'>, number> = {
+      medicine: 0, vaccine: 1, accessory: 2, toys: 3, feeding: 4, grooming: 5, hygiene: 6, travel: 7
+    }
+    if (filter !== 'all' && p.category !== categoryMap[filter]) return false
     if (search.trim()) {
       const q = search.trim().toLowerCase()
       return (
@@ -57,7 +58,10 @@ export default function Products() {
     return true
   })
 
-  const categoryLabel = (c: number) => c === 0 ? 'Medicine' : c === 1 ? 'Vaccine' : 'Accessory'
+  const categoryLabels: Record<number, string> = {
+    0: 'Medicine', 1: 'Vaccine', 2: 'Accessory', 3: 'Toys', 4: 'Feeding', 5: 'Grooming', 6: 'Hygiene', 7: 'Travel'
+  }
+  const categoryLabel = (c: number) => categoryLabels[c] ?? 'Other'
 
   return (
     <div className="app-container">
@@ -113,6 +117,41 @@ export default function Products() {
                   >
                     Accessory
                   </button>
+                  <button
+                    type="button"
+                    className={`toggle-option ${filter === 'toys' ? 'active' : ''}`}
+                    onClick={() => setFilter('toys')}
+                  >
+                    Toys
+                  </button>
+                  <button
+                    type="button"
+                    className={`toggle-option ${filter === 'feeding' ? 'active' : ''}`}
+                    onClick={() => setFilter('feeding')}
+                  >
+                    Feeding
+                  </button>
+                  <button
+                    type="button"
+                    className={`toggle-option ${filter === 'grooming' ? 'active' : ''}`}
+                    onClick={() => setFilter('grooming')}
+                  >
+                    Grooming
+                  </button>
+                  <button
+                    type="button"
+                    className={`toggle-option ${filter === 'hygiene' ? 'active' : ''}`}
+                    onClick={() => setFilter('hygiene')}
+                  >
+                    Hygiene
+                  </button>
+                  <button
+                    type="button"
+                    className={`toggle-option ${filter === 'travel' ? 'active' : ''}`}
+                    onClick={() => setFilter('travel')}
+                  >
+                    Travel
+                  </button>
                 </fieldset>
                 <button
                   type="button"
@@ -148,7 +187,7 @@ export default function Products() {
                 {filtered.map((p) => (
                   <article key={p.id} className="product-card">
                     <div className="product-card-head">
-                      <span className={`badge badge-${p.category === 0 ? 'med' : p.category === 1 ? 'vac' : 'acc'}`}>
+                      <span className={`badge badge-${({0:'med',1:'vac',2:'acc',3:'toy',4:'feed',5:'groom',6:'hyg',7:'travel'} as Record<number,string>)[p.category] ?? 'acc'}`}>
                         {categoryLabel(p.category)}
                       </span>
                       <span className="product-brand">{p.brand}</span>

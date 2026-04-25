@@ -27,6 +27,7 @@ public class InMemoryProductRepository : IProductRepository
         Description = p.Description,
         Price = p.Price,
         Category = p.Category,
+        PetType = p.PetType,
         Brand = p.Brand,
         ImageUrl = p.ImageUrl,
         StockQuantity = p.StockQuantity,

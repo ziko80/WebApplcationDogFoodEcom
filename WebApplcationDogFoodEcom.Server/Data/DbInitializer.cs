@@ -40,6 +40,7 @@ public static class DbInitializer
                 Description = p.Description,
                 Price = p.Price,
                 Category = p.Category,
+                PetType = p.PetType,
                 Brand = p.Brand,
                 ImageUrl = p.ImageUrl,
                 StockQuantity = p.StockQuantity,
@@ -49,6 +50,48 @@ public static class DbInitializer
 
             db.Products.AddRange(seed);
             await db.SaveChangesAsync(ct);
+        }
+        else
+        {
+            // Add any new products from ProductStore that are missing in the DB.
+            var existingIds = await db.Products.Select(p => p.Id).ToListAsync(ct);
+            var missing = ProductStore.Products
+                .Where(p => !existingIds.Contains(p.Id))
+                .Select(p => new Product
+                {
+                    Id = p.Id,
+                    Name = p.Name,
+                    Description = p.Description,
+                    Price = p.Price,
+                    Category = p.Category,
+                    PetType = p.PetType,
+                    Brand = p.Brand,
+                    ImageUrl = p.ImageUrl,
+                    StockQuantity = p.StockQuantity,
+                    DosageInfo = p.DosageInfo,
+                    TargetCondition = p.TargetCondition
+                })
+                .ToList();
+
+            if (missing.Count > 0)
+            {
+                logger.LogInformation("Adding {Count} new products from ProductStore", missing.Count);
+                db.Products.AddRange(missing);
+
+                // Also update existing products that may have stale category/PetType values.
+                var existingProducts = await db.Products.ToListAsync(ct);
+                foreach (var existing in existingProducts)
+                {
+                    var source = ProductStore.Products.FirstOrDefault(p => p.Id == existing.Id);
+                    if (source is not null)
+                    {
+                        existing.Category = source.Category;
+                        existing.PetType = source.PetType;
+                    }
+                }
+
+                await db.SaveChangesAsync(ct);
+            }
         }
     }
 }

@@ -81,8 +81,10 @@ function renderProducts(products) {
     }
 
     productsGrid.innerHTML = products.map(p => {
-        const catClass = p.category === 0 ? 'medicine' : p.category === 1 ? 'vaccine' : 'accessory';
-        const catLabel = p.category === 0 ? 'Medicine' : p.category === 1 ? 'Vaccine' : 'Accessory';
+        const catClasses = ['medicine','vaccine','accessory','toys','feeding','grooming','hygiene','travel'];
+        const catLabels  = ['Medicine','Vaccine','Accessory','Toys','Feeding','Grooming','Hygiene','Travel'];
+        const catClass = catClasses[p.category] ?? 'accessory';
+        const catLabel = catLabels[p.category] ?? 'Other';
         const stockClass = p.stockQuantity < 20 ? 'low' : '';
         return `
         <div class="product-card">
@@ -286,7 +288,11 @@ document.querySelectorAll('.nav-link').forEach(link => {
             ordersSection.classList.add('hidden');
             heroBanner.classList.remove('hidden');
             productsSection.classList.remove('hidden');
-            sectionTitle.textContent = filter === 'all' ? 'All Products' : filter === 'medicines' ? 'Medicines' : 'Vaccines';
+            sectionTitle.textContent = {
+                all: 'All Products', medicines: 'Medicines', vaccines: 'Vaccines',
+                accessories: 'Accessories', toys: 'Toys', feeding: 'Feeding',
+                grooming: 'Grooming', hygiene: 'Hygiene', travel: 'Travel'
+            }[filter] || 'All Products';
             await loadProducts(filter, searchInput.value);
         }
     });
