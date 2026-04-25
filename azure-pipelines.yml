@@ -1,8 +1,123 @@
+# ============================================================================
+# FILE: azure-pipelines.yml
+# ============================================================================
+#
+# PURPOSE
+# -------
+# This file defines the CI/CD pipeline for the WebApplcationDogFoodEcom
+# application — a .NET Aspire e-commerce platform for dog food / pet
+# products. It automates the entire path from source code to production
+# using Azure DevOps Pipelines.
+#
+# WHY THIS FILE WAS ADDED
+# -----------------------
+# Without a pipeline definition the team would need to build, test, and
+# deploy the application manually — a slow, error-prone process that
+# does not scale. This YAML file enables:
+#
+#   • Continuous Integration  – every push to `main` or the feature
+#     branch automatically compiles the .NET 10 server, builds the
+#     React/Vite frontend, bundles them into a single Docker image,
+#     and pushes it to Azure Container Registry (ACR).
+#
+#   • Continuous Delivery – the same immutable image is promoted
+#     through four isolated environments (Dev → QA → UAT → Prod),
+#     each with its own Azure resources and connection strings.
+#
+#   • Governance & Safety – higher environments (UAT, Production)
+#     use Azure DevOps approval gates so that no code reaches
+#     customers without explicit human sign-off.
+#
+# WHAT IT DOES — STAGE BY STAGE
+# -----------------------------
+#   1. Build   – Installs .NET 10 SDK & Node 20, builds the React
+#                frontend with Vite, copies the output into the
+#                server's wwwroot (mirroring the Aspire
+#                PublishWithContainerFiles behaviour), publishes the
+#                .NET project, builds a Docker image, and pushes it
+#                to the Dev ACR. Also generates the Aspire manifest
+#                for infrastructure review.
+#
+#   2. Dev     – Pulls the newly built image and deploys it to the
+#                Dev Azure Container App, injecting Dev connection
+#                strings for SQL and Redis.
+#
+#   3. QA      – Imports the same image from Dev ACR into QA ACR,
+#                deploys to QA Container App with QA secrets.
+#
+#   4. UAT     – Same promotion pattern; requires manual approval
+#                before deployment starts.
+#
+#   5. Prod    – Final promotion; requires manual approval.
+#                Deploys to the Production Container App.
+#
+# DESIGN DECISIONS
+# ----------------
+#   • Single container – The Aspire AppHost calls
+#     server.PublishWithContainerFiles(webfrontend, "wwwroot"), so
+#     the React SPA is served as static files from the .NET server.
+#     There is no need for a separate frontend deployment or CDN.
+#
+#   • Image promotion (not rebuild) – The Docker image is built
+#     exactly once and the same binary flows through every stage.
+#     This guarantees that what was tested in QA is identical to
+#     what runs in Production.
+#
+#   • Azure Container Apps – Chosen because it is the recommended
+#     hosting target for .NET Aspire applications. It provides
+#     managed scaling, ingress, and revision management without
+#     the overhead of managing a full Kubernetes cluster.
+#
+#   • Environment-scoped variable groups – Secrets (SQL connection
+#     strings, Redis keys) are stored in Azure DevOps Library and
+#     scoped per environment, preventing accidental cross-env leaks.
+#
+# AZURE ARCHITECTURE (per environment)
+# ------------------------------------
+#   Azure Container Apps  ← .NET 10 Aspire server + React SPA
+#   Azure SQL Database    ← pawmedsdb (products, orders, users)
+#   Azure Cache for Redis ← output caching / session state
+#   Azure Container Registry ← Docker images
+#
+# PREREQUISITES — create in Azure DevOps BEFORE running this pipeline
+# -------------------------------------------------------------------
+#   1. Service Connection  → Azure Resource Manager (ARM) service
+#      connection with Contributor role on the target subscription.
+#
+#   2. Variable Groups (Azure DevOps > Pipelines > Library)
+#      Create one per environment:
+#        • DogFoodEcom-Dev
+#        • DogFoodEcom-QA
+#        • DogFoodEcom-UAT
+#        • DogFoodEcom-Prod
+#
+#   3. Environments (Azure DevOps > Pipelines > Environments)
+#      Create: dev, qa, uat, production.
+#      Add approval checks on "uat" and "production".
+#
+#   4. Azure Resources (per environment)
+#      Resource Group, ACR, Container Apps Environment,
+#      Azure SQL Server + Database (pawmedsdb),
+#      Azure Cache for Redis.
+#
+# REQUIRED VARIABLES IN EACH VARIABLE GROUP
+# ------------------------------------------
+#   azureServiceConnection  - ARM service connection name
+#   acrName                 - ACR name (e.g. dogfoodecomdevacr)
+#   acrLoginServer          - ACR login server (e.g. dogfoodecomdevacr.azurecr.io)
+#   devAcrLoginServer       - Dev ACR login server (for image import in QA/UAT/Prod)
+#   containerAppName        - Container App name for the server
+#   containerAppsEnvName    - Container Apps Environment name
+#   resourceGroupName       - Resource group for the environment
+#   sqlConnectionString     - ADO.NET connection string for pawmedsdb
+#   redisConnectionString   - Azure Cache for Redis connection string
+# ============================================================================
+
 trigger:
   branches:
     include:
       - main
-      - Abhisheksingh/Devops
+      - AbhishekSingh/Devops
 
 pool:
   vmImage: 'ubuntu-latest'
@@ -12,19 +127,23 @@ variables:
   nodeVersion: '20.x'
   buildConfiguration: 'Release'
   serverProject: 'WebApplcationDogFoodEcom.Server/WebApplcationDogFoodEcom.Server.csproj'
-  publishPath: '$(Build.ArtifactStagingDirectory)/server'
   frontendPath: 'frontend'
-  frontendPublishPath: '$(Build.ArtifactStagingDirectory)/frontend'
+  imageName: 'dogfoodecom-server'
+  imageTag: '$(Build.BuildId)'
 
-stages: 
+# ════════════════════════════════════════════════════════════════════════════
+stages:
+
   # ──────────────────────────────────────────────
-  # Build Stage
+  # Build & Push Container Image
   # ──────────────────────────────────────────────
   - stage: Build
-    displayName: 'Build & Publish Artifacts'
+    displayName: 'Build & Push Container Image'
+    variables:
+      - group: 'DogFoodEcom-Dev'   # uses Dev ACR for image storage
     jobs:
-      - job: BuildServer
-        displayName: 'Build .NET Server'
+      - job: BuildAndPush
+        displayName: 'Build .NET + React → Docker Image'
         steps:
           - task: UseDotNet@2
             displayName: 'Install .NET SDK'
@@ -33,51 +152,68 @@ stages:
               version: '$(dotnetVersion)'
               includePreviewVersions: true
 
-          - script: dotnet restore $(serverProject)
-            displayName: 'Restore NuGet packages'
-
-          - script: dotnet build $(serverProject) --configuration $(buildConfiguration) --no-restore
-            displayName: 'Build Server'
-
-          - script: dotnet publish $(serverProject) --configuration $(buildConfiguration) --no-build --output $(publishPath)
-            displayName: 'Publish Server'
-
-          - task: PublishBuildArtifacts@1
-            displayName: 'Publish Server Artifact'
-            inputs:
-              PathtoPublish: '$(publishPath)'
-              ArtifactName: 'server-drop'
-
-      - job: BuildFrontend
-        displayName: 'Build React Frontend'
-        steps:
           - task: UseNode@1
             displayName: 'Install Node.js'
             inputs:
               version: '$(nodeVersion)'
 
+          # Build the React frontend first so it's available for publish
           - script: npm ci
-            displayName: 'Install npm dependencies'
+            displayName: 'Install frontend dependencies'
             workingDirectory: '$(frontendPath)'
 
           - script: npm run build
-            displayName: 'Build Frontend'
+            displayName: 'Build frontend (Vite)'
             workingDirectory: '$(frontendPath)'
 
-          - task: PublishBuildArtifacts@1
-            displayName: 'Publish Frontend Artifact'
+          # Copy frontend dist → server wwwroot (mirrors PublishWithContainerFiles)
+          - script: |
+              mkdir -p WebApplcationDogFoodEcom.Server/wwwroot
+              cp -r $(frontendPath)/dist/* WebApplcationDogFoodEcom.Server/wwwroot/
+            displayName: 'Bundle frontend into server wwwroot'
+
+          # Publish .NET server
+          - script: >
+              dotnet publish $(serverProject)
+              --configuration $(buildConfiguration)
+              --output $(Build.ArtifactStagingDirectory)/publish
+            displayName: 'Publish .NET Server'
+
+          # Build & push Docker image to ACR
+          - task: Docker@2
+            displayName: 'Build & Push Docker Image'
             inputs:
-              PathtoPublish: '$(frontendPath)/dist'
-              ArtifactName: 'frontend-drop'
+              containerRegistry: '$(azureServiceConnection)'
+              repository: '$(imageName)'
+              command: 'buildAndPush'
+              Dockerfile: '**/Dockerfile'
+              buildContext: '$(Build.ArtifactStagingDirectory)/publish'
+              tags: |
+                $(imageTag)
+                latest
+
+          # Publish Aspire manifest as artifact (useful for azd / infra review)
+          - script: >
+              dotnet run --project WebApplcationDogFoodEcom.AppHost
+              -- --publisher manifest
+              --output-path $(Build.ArtifactStagingDirectory)/aspire-manifest.json
+            displayName: 'Generate Aspire Manifest'
+            continueOnError: true
+
+          - task: PublishBuildArtifacts@1
+            displayName: 'Publish Pipeline Artifacts'
+            inputs:
+              PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+              ArtifactName: 'drop'
 
   # ──────────────────────────────────────────────
-  # DEV Stage
+  # DEV
   # ──────────────────────────────────────────────
   - stage: Dev
     displayName: 'Deploy to DEV'
     dependsOn: Build
     variables:
-      - group: 'DogFoodEcom-Dev'  # Variable group for Dev environment
+      - group: 'DogFoodEcom-Dev'
     jobs:
       - deployment: DeployDev
         displayName: 'Deploy to DEV'
@@ -86,35 +222,29 @@ stages:
           runOnce:
             deploy:
               steps:
-                - download: current
-                  artifact: server-drop
-                - download: current
-                  artifact: frontend-drop
-
-                - task: AzureWebApp@1
-                  displayName: 'Deploy Server to Dev App Service'
+                - task: AzureCLI@2
+                  displayName: 'Deploy Container App — DEV'
                   inputs:
                     azureSubscription: '$(azureServiceConnection)'
-                    appType: 'webApp'
-                    appName: '$(serverAppName)'
-                    package: '$(Pipeline.Workspace)/server-drop'
-
-                - task: AzureWebApp@1
-                  displayName: 'Deploy Frontend to Dev App Service'
-                  inputs:
-                    azureSubscription: '$(azureServiceConnection)'
-                    appType: 'webApp'
-                    appName: '$(frontendAppName)'
-                    package: '$(Pipeline.Workspace)/frontend-drop'
+                    scriptType: 'bash'
+                    scriptLocation: 'inlineScript'
+                    inlineScript: |
+                      az containerapp update \
+                        --name $(containerAppName) \
+                        --resource-group $(resourceGroupName) \
+                        --image $(acrLoginServer)/$(imageName):$(imageTag) \
+                        --set-env-vars \
+                          "ConnectionStrings__pawmedsdb=$(sqlConnectionString)" \
+                          "ConnectionStrings__cache=$(redisConnectionString)"
 
   # ──────────────────────────────────────────────
-  # QA Stage
+  # QA
   # ──────────────────────────────────────────────
   - stage: QA
     displayName: 'Deploy to QA'
     dependsOn: Dev
     variables:
-      - group: 'DogFoodEcom-QA'  # Variable group for QA environment
+      - group: 'DogFoodEcom-QA'
     jobs:
       - deployment: DeployQA
         displayName: 'Deploy to QA'
@@ -123,82 +253,122 @@ stages:
           runOnce:
             deploy:
               steps:
-                - download: current
-                  artifact: server-drop
-                - download: current
-                  artifact: frontend-drop
-
-                - task: AzureWebApp@1
-                  displayName: 'Deploy Server to QA App Service'
+                # Import image from Dev ACR to QA ACR
+                - task: AzureCLI@2
+                  displayName: 'Import image to QA ACR'
                   inputs:
                     azureSubscription: '$(azureServiceConnection)'
-                    appType: 'webApp'
-                    appName: '$(serverAppName)'
-                    package: '$(Pipeline.Workspace)/server-drop'
+                    scriptType: 'bash'
+                    scriptLocation: 'inlineScript'
+                    inlineScript: |
+                      az acr import \
+                        --name $(acrName) \
+                        --source $(devAcrLoginServer)/$(imageName):$(imageTag) \
+                        --image $(imageName):$(imageTag) \
+                        --force
 
-                - task: AzureWebApp@1
-                  displayName: 'Deploy Frontend to QA App Service'
+                - task: AzureCLI@2
+                  displayName: 'Deploy Container App — QA'
                   inputs:
                     azureSubscription: '$(azureServiceConnection)'
-                    appType: 'webApp'
-                    appName: '$(frontendAppName)'
-                    package: '$(Pipeline.Workspace)/frontend-drop'
+                    scriptType: 'bash'
+                    scriptLocation: 'inlineScript'
+                    inlineScript: |
+                      az containerapp update \
+                        --name $(containerAppName) \
+                        --resource-group $(resourceGroupName) \
+                        --image $(acrLoginServer)/$(imageName):$(imageTag) \
+                        --set-env-vars \
+                          "ConnectionStrings__pawmedsdb=$(sqlConnectionString)" \
+                          "ConnectionStrings__cache=$(redisConnectionString)"
 
   # ──────────────────────────────────────────────
-  # UAT Stage
+  # UAT
   # ──────────────────────────────────────────────
   - stage: UAT
     displayName: 'Deploy to UAT'
     dependsOn: QA
     variables:
-      - group: 'DogFoodEcom-UAT'  # Variable group for UAT environment
+      - group: 'DogFoodEcom-UAT'
     jobs:
       - deployment: DeployUAT
         displayName: 'Deploy to UAT'
-        environment: 'uat'
+        environment: 'uat'              # ← add approval gate in Azure DevOps
         strategy:
           runOnce:
             deploy:
               steps:
-                - download: current
-                  artifact: server-drop
-                - download: current
-                  artifact: frontend-drop
-
-                - task: AzureWebApp@1
-                  displayName: 'Deploy Server to UAT App Service'
+                - task: AzureCLI@2
+                  displayName: 'Import image to UAT ACR'
                   inputs:
                     azureSubscription: '$(azureServiceConnection)'
-                    appType: 'webApp'
-                    appName: '$(serverAppName)'
-                    package: '$(Pipeline.Workspace)/server-drop'
+                    scriptType: 'bash'
+                    scriptLocation: 'inlineScript'
+                    inlineScript: |
+                      az acr import \
+                        --name $(acrName) \
+                        --source $(devAcrLoginServer)/$(imageName):$(imageTag) \
+                        --image $(imageName):$(imageTag) \
+                        --force
 
-                - task: AzureWebApp@1
-                  displayName: 'Deploy Frontend to UAT App Service'
+                - task: AzureCLI@2
+                  displayName: 'Deploy Container App — UAT'
                   inputs:
                     azureSubscription: '$(azureServiceConnection)'
-                    appType: 'webApp'
-                    appName: '$(frontendAppName)'
-                    package: '$(Pipeline.Workspace)/frontend-drop'
+                    scriptType: 'bash'
+                    scriptLocation: 'inlineScript'
+                    inlineScript: |
+                      az containerapp update \
+                        --name $(containerAppName) \
+                        --resource-group $(resourceGroupName) \
+                        --image $(acrLoginServer)/$(imageName):$(imageTag) \
+                        --set-env-vars \
+                          "ConnectionStrings__pawmedsdb=$(sqlConnectionString)" \
+                          "ConnectionStrings__cache=$(redisConnectionString)"
 
   # ──────────────────────────────────────────────
-  # Production Stage
+  # Production
   # ──────────────────────────────────────────────
   - stage: Production
     displayName: 'Deploy to Production'
     dependsOn: UAT
     variables:
-      - group: 'DogFoodEcom-Prod'  # Variable group for Production environment
+      - group: 'DogFoodEcom-Prod'
     jobs:
       - deployment: DeployProduction
         displayName: 'Deploy to Production'
-        environment: 'production'
+        environment: 'production'       # ← add approval gate in Azure DevOps
         strategy:
           runOnce:
             deploy:
               steps:
-                - download: current
-                  artifact: server-drop
+                - task: AzureCLI@2
+                  displayName: 'Import image to Prod ACR'
+                  inputs:
+                    azureSubscription: '$(azureServiceConnection)'
+                    scriptType: 'bash'
+                    scriptLocation: 'inlineScript'
+                    inlineScript: |
+                      az acr import \
+                        --name $(acrName) \
+                        --source $(devAcrLoginServer)/$(imageName):$(imageTag) \
+                        --image $(imageName):$(imageTag) \
+                        --force
+
+                - task: AzureCLI@2
+                  displayName: 'Deploy Container App — Production'
+                  inputs:
+                    azureSubscription: '$(azureServiceConnection)'
+                    scriptType: 'bash'
+                    scriptLocation: 'inlineScript'
+                    inlineScript: |
+                      az containerapp update \
+                        --name $(containerAppName) \
+                        --resource-group $(resourceGroupName) \
+                        --image $(acrLoginServer)/$(imageName):$(imageTag) \
+                        --set-env-vars \
+                          "ConnectionStrings__pawmedsdb=$(sqlConnectionString)" \
+                          "ConnectionStrings__cache=$(redisConnectionString)"
                 - download: current
                   artifact: frontend-drop
 
