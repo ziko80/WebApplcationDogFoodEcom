@@ -3,6 +3,12 @@ const API = {
     medicines:   '/api/products/medicines',
     vaccines:    '/api/products/vaccines',
     accessories: '/api/products/accessories',
+    'all-accessories': '/api/products/all-accessories',
+    toys:        '/api/products/toys',
+    feeding:     '/api/products/feeding',
+    grooming:    '/api/products/grooming',
+    hygiene:     '/api/products/hygiene',
+    travel:      '/api/products/travel',
     cart:        '/api/cart',
     orders:      '/api/orders'
 };
@@ -51,18 +57,17 @@ function showToast(msg, type = '') {
 }
 
 // ── Products ───────────────────────────────────────
-async function loadProducts(filter, search) {
-    let url = API.products;
-    if (filter === 'medicines') url = API.medicines;
-    else if (filter === 'vaccines') url = API.vaccines;
-    else if (filter === 'accessories') url = API.accessories;
+const categoryFilters = ['medicines','vaccines','accessories','all-accessories','toys','feeding','grooming','hygiene','travel'];
 
-    if (search && filter !== 'medicines' && filter !== 'vaccines' && filter !== 'accessories') {
+async function loadProducts(filter, search) {
+    let url = API[filter] || API.products;
+
+    if (search && !categoryFilters.includes(filter)) {
         url += `?search=${encodeURIComponent(search)}`;
     }
 
     const products = await api(url);
-    const filtered = search && (filter === 'medicines' || filter === 'vaccines' || filter === 'accessories')
+    const filtered = search && categoryFilters.includes(filter)
         ? products.filter(p =>
             p.name.toLowerCase().includes(search.toLowerCase()) ||
             p.description.toLowerCase().includes(search.toLowerCase()) ||
@@ -270,10 +275,61 @@ function toggleCart(show) {
     cartOverlay.classList.toggle('hidden', !show);
 }
 
+// -- Accessories dropdown --
+const accDropdown = $('#accessoriesDropdown');
+const accToggle  = $('#accessoriesToggle');
+
+async function showAccessoryFilter(filter) {
+    currentFilter = filter;
+    document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+    accToggle.classList.add('active');
+    document.querySelectorAll('.dropdown-item').forEach(d => d.classList.remove('active'));
+    if (filter !== 'all-accessories') {
+        const active = document.querySelector(`.dropdown-item[data-filter="${filter}"]`);
+        if (active) active.classList.add('active');
+    }
+    accDropdown.classList.remove('open');
+    ordersSection.classList.add('hidden');
+    heroBanner.classList.remove('hidden');
+    productsSection.classList.remove('hidden');
+    const titles = {
+        'all-accessories': 'Accessories', toys: 'Toys', feeding: 'Feeding',
+        grooming: 'Grooming', hygiene: 'Hygiene', travel: 'Travel'
+    };
+    sectionTitle.textContent = titles[filter] || 'Accessories';
+    await loadProducts(filter, searchInput.value);
+}
+
+// Clicking the Accessories text loads all accessories by default
+accToggle.addEventListener('click', async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    // If already on an accessory sub-filter, toggle dropdown; otherwise load all accessories
+    if (accToggle.classList.contains('active')) {
+        accDropdown.classList.toggle('open');
+    } else {
+        accDropdown.classList.remove('open');
+        await showAccessoryFilter('all-accessories');
+    }
+});
+
+document.addEventListener('click', () => accDropdown.classList.remove('open'));
+accDropdown.addEventListener('click', (e) => e.stopPropagation());
+
+document.querySelectorAll('.dropdown-item').forEach(item => {
+    item.addEventListener('click', async (e) => {
+        e.preventDefault();
+        await showAccessoryFilter(item.dataset.filter);
+    });
+});
+
 document.querySelectorAll('.nav-link').forEach(link => {
     link.addEventListener('click', async (e) => {
         e.preventDefault();
+        if (link.id === 'accessoriesToggle') return;
+
         document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+        document.querySelectorAll('.dropdown-item').forEach(d => d.classList.remove('active'));
         link.classList.add('active');
 
         const filter = link.dataset.filter;
@@ -288,11 +344,7 @@ document.querySelectorAll('.nav-link').forEach(link => {
             ordersSection.classList.add('hidden');
             heroBanner.classList.remove('hidden');
             productsSection.classList.remove('hidden');
-            sectionTitle.textContent = {
-                all: 'All Products', medicines: 'Medicines', vaccines: 'Vaccines',
-                accessories: 'Accessories', toys: 'Toys', feeding: 'Feeding',
-                grooming: 'Grooming', hygiene: 'Hygiene', travel: 'Travel'
-            }[filter] || 'All Products';
+            sectionTitle.textContent = { all: 'All Products', medicines: 'Medicines', vaccines: 'Vaccines' }[filter] || 'All Products';
             await loadProducts(filter, searchInput.value);
         }
     });

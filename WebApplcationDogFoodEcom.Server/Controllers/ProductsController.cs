@@ -36,6 +36,10 @@ public class ProductsController : ControllerBase
 
     [HttpGet("accessories")]
     public async Task<ActionResult<IReadOnlyList<Product>>> GetAccessories(CancellationToken ct)
+        => Ok(await _service.GetByCategoryAsync(ProductCategory.Accessory, ct));
+
+    [HttpGet("all-accessories")]
+    public async Task<ActionResult<IReadOnlyList<Product>>> GetAllAccessories(CancellationToken ct)
     {
         var all = await _service.SearchAsync(null, null, ct);
         var results = all.Where(p => p.Category is not (ProductCategory.Medicine or ProductCategory.Vaccine)).ToList();
