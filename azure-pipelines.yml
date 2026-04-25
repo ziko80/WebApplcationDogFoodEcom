@@ -16,7 +16,7 @@ variables:
   frontendPath: 'frontend'
   frontendPublishPath: '$(Build.ArtifactStagingDirectory)/frontend'
 
-stages:
+stages: 
   # ──────────────────────────────────────────────
   # Build Stage
   # ──────────────────────────────────────────────
