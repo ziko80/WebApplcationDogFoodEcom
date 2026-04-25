@@ -16,12 +16,7 @@ interface Product {
 
 type Filter = 'all' | 'medicine' | 'vaccine'
 
-interface ProductsProps {
-  username: string
-  onLogout: () => void
-}
-
-export default function Products({ username, onLogout }: ProductsProps) {
+export default function Products() {
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -70,14 +65,7 @@ export default function Products({ username, onLogout }: ProductsProps) {
           <h1 className="app-title">🐾 PawMeds</h1>
           <p className="app-subtitle">Dog medicines &amp; vaccines</p>
         </div>
-        <div className="user-box">
-          <span>
-            Signed in as <strong>{username}</strong>
-          </span>
-          <button type="button" className="logout-btn" onClick={onLogout}>
-            Sign out
-          </button>
-        </div>
+
       </header>
 
       <main className="main-content">
