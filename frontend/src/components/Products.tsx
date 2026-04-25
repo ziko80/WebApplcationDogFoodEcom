@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import './pawmeds.css'
 
 interface Product {
@@ -16,12 +16,17 @@ interface Product {
 
 type Filter = 'all' | 'medicine' | 'vaccine' | 'accessory' | 'toys' | 'feeding' | 'grooming' | 'hygiene' | 'travel'
 
+const accessoryKeys: Filter[] = ['toys', 'feeding', 'grooming', 'hygiene', 'travel']
+
 export default function Products() {
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [filter, setFilter] = useState<Filter>('all')
   const [search, setSearch] = useState('')
+  const [accOpen, setAccOpen] = useState(false)
+  const [page, setPage] = useState<'products' | 'orders'>('products')
+  const ddRef = useRef<HTMLDivElement>(null)
 
   const fetchProducts = async () => {
     setLoading(true)
@@ -38,9 +43,18 @@ export default function Products() {
     }
   }
 
+  useEffect(() => { fetchProducts() }, [])
+
+  // close dropdown on outside click
   useEffect(() => {
-    fetchProducts()
+    const handler = (e: MouseEvent) => {
+      if (ddRef.current && !ddRef.current.contains(e.target as Node)) setAccOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
   }, [])
+
+  const isAccFilter = accessoryKeys.includes(filter)
 
   const filtered = products.filter((p) => {
     const categoryMap: Record<Exclude<Filter, 'all'>, number> = {
@@ -63,164 +77,130 @@ export default function Products() {
   }
   const categoryLabel = (c: number) => categoryLabels[c] ?? 'Other'
 
+  const navClick = (f: Filter) => { setFilter(f); setAccOpen(false); setPage('products') }
+
   return (
     <div className="app-container">
-      <header className="app-header products-header">
-        <div>
-          <h1 className="app-title">🐾 PawMeds</h1>
-          <p className="app-subtitle">Pet medicines, vaccines &amp; accessories</p>
-        </div>
+      {/* ── Top navbar ── */}
+      <nav className="pm-navbar">
+        <span className="pm-navbar-brand">🐾 PawMeds</span>
+        <div className="pm-navbar-links">
+          <button type="button" className={`pm-nav-link ${filter === 'all' && page === 'products' ? 'pm-nav-active' : ''}`} onClick={() => navClick('all')}>All Products</button>
+          <button type="button" className={`pm-nav-link ${filter === 'medicine' ? 'pm-nav-active' : ''}`} onClick={() => navClick('medicine')}>Medicines</button>
+          <button type="button" className={`pm-nav-link ${filter === 'vaccine' ? 'pm-nav-active' : ''}`} onClick={() => navClick('vaccine')}>Vaccines</button>
 
-      </header>
-
-      <main className="main-content">
-        <section className="weather-section">
-          <div className="card">
-            <div className="section-header">
-              <h2 className="section-title">Products</h2>
-              <div className="header-actions">
-                <input
-                  type="search"
-                  className="product-search"
-                  placeholder="Search products…"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  aria-label="Search products"
-                />
-                <fieldset className="toggle-switch" aria-label="Category filter">
-                  <legend className="visually-hidden">Category filter</legend>
-                  <button
-                    type="button"
-                    className={`toggle-option ${filter === 'all' ? 'active' : ''}`}
-                    onClick={() => setFilter('all')}
-                  >
-                    All
+          <div className="pm-nav-dropdown" ref={ddRef}>
+            <button type="button" className={`pm-nav-link ${isAccFilter ? 'pm-nav-active' : ''}`} onClick={() => setAccOpen(!accOpen)}>
+              Accessories ▾
+            </button>
+            {accOpen && (
+              <div className="pm-dropdown-menu">
+                {accessoryKeys.map((k) => (
+                  <button key={k} type="button" className={`pm-dropdown-item ${filter === k ? 'pm-dropdown-active' : ''}`} onClick={() => navClick(k)}>
+                    {k.charAt(0).toUpperCase() + k.slice(1)}
                   </button>
-                  <button
-                    type="button"
-                    className={`toggle-option ${filter === 'medicine' ? 'active' : ''}`}
-                    onClick={() => setFilter('medicine')}
-                  >
-                    Medicine
-                  </button>
-                  <button
-                    type="button"
-                    className={`toggle-option ${filter === 'vaccine' ? 'active' : ''}`}
-                    onClick={() => setFilter('vaccine')}
-                  >
-                    Vaccine
-                  </button>
-                  <button
-                    type="button"
-                    className={`toggle-option ${filter === 'accessory' ? 'active' : ''}`}
-                    onClick={() => setFilter('accessory')}
-                  >
-                    Accessory
-                  </button>
-                  <button
-                    type="button"
-                    className={`toggle-option ${filter === 'toys' ? 'active' : ''}`}
-                    onClick={() => setFilter('toys')}
-                  >
-                    Toys
-                  </button>
-                  <button
-                    type="button"
-                    className={`toggle-option ${filter === 'feeding' ? 'active' : ''}`}
-                    onClick={() => setFilter('feeding')}
-                  >
-                    Feeding
-                  </button>
-                  <button
-                    type="button"
-                    className={`toggle-option ${filter === 'grooming' ? 'active' : ''}`}
-                    onClick={() => setFilter('grooming')}
-                  >
-                    Grooming
-                  </button>
-                  <button
-                    type="button"
-                    className={`toggle-option ${filter === 'hygiene' ? 'active' : ''}`}
-                    onClick={() => setFilter('hygiene')}
-                  >
-                    Hygiene
-                  </button>
-                  <button
-                    type="button"
-                    className={`toggle-option ${filter === 'travel' ? 'active' : ''}`}
-                    onClick={() => setFilter('travel')}
-                  >
-                    Travel
-                  </button>
-                </fieldset>
-                <button
-                  type="button"
-                  className="refresh-button"
-                  onClick={fetchProducts}
-                  disabled={loading}
-                >
-                  {loading ? 'Loading…' : 'Refresh'}
-                </button>
-              </div>
-            </div>
-
-            {error && (
-              <div className="error-message" role="alert">
-                <span>⚠️ {error}</span>
-              </div>
-            )}
-
-            {loading && products.length === 0 && (
-              <div className="loading-skeleton" role="status">
-                {[...Array(6)].map((_, i) => (
-                  <div key={i} className="skeleton-row" />
-                ))}
-              </div>
-            )}
-
-            {!loading && filtered.length === 0 && !error && (
-              <p className="empty-state">No products match your filters.</p>
-            )}
-
-            {filtered.length > 0 && (
-              <div className="product-grid">
-                {filtered.map((p) => (
-                  <article key={p.id} className="product-card">
-                    <div className="product-card-head">
-                      <span className={`badge badge-${({0:'med',1:'vac',2:'acc',3:'toy',4:'feed',5:'groom',6:'hyg',7:'travel'} as Record<number,string>)[p.category] ?? 'acc'}`}>
-                        {categoryLabel(p.category)}
-                      </span>
-                      <span className="product-brand">{p.brand}</span>
-                    </div>
-                    <h3 className="product-name">{p.name}</h3>
-                    <p className="product-desc">{p.description}</p>
-                    <dl className="product-meta">
-                      <div>
-                        <dt>Target</dt>
-                        <dd>{p.targetCondition}</dd>
-                      </div>
-                      <div>
-                        <dt>Dosage</dt>
-                        <dd>{p.dosageInfo}</dd>
-                      </div>
-                      <div>
-                        <dt>In stock</dt>
-                        <dd>{p.stockQuantity}</dd>
-                      </div>
-                    </dl>
-                    <div className="product-footer">
-                      <span className="product-price">${p.price.toFixed(2)}</span>
-                      <button type="button" className="add-btn" disabled={p.stockQuantity === 0}>
-                        {p.stockQuantity === 0 ? 'Out of stock' : 'Add to cart'}
-                      </button>
-                    </div>
-                  </article>
                 ))}
               </div>
             )}
           </div>
-        </section>
-      </main>
+
+          <button type="button" className={`pm-nav-link ${page === 'orders' ? 'pm-nav-active' : ''}`} onClick={() => { setPage('orders'); setAccOpen(false) }}>My Orders</button>
+        </div>
+
+        <div className="pm-navbar-right">
+          <input
+            type="search"
+            className="pm-navbar-search"
+            placeholder="Search products..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            aria-label="Search products"
+          />
+          <span className="pm-cart-icon" title="Cart">🛒<sup className="pm-cart-badge">0</sup></span>
+        </div>
+      </nav>
+
+      {/* ── Hero banner ── */}
+      <section className="pm-hero">
+        <h2>Premium Medicine, Vaccines &amp; Accessories for Your Pets</h2>
+        <p>Trusted brands. Vet-recommended. Fast delivery to your door.</p>
+      </section>
+
+      {/* ── Orders page ── */}
+      {page === 'orders' && (
+        <main className="main-content">
+          <section className="weather-section">
+            <div className="card">
+              <h2 className="section-title">My Orders</h2>
+              <p className="empty-state">You have no orders yet.</p>
+            </div>
+          </section>
+        </main>
+      )}
+
+      {/* ── Products page ── */}
+      {page === 'products' && (
+        <main className="main-content">
+          <section className="weather-section">
+            <div className="card">
+              {error && (
+                <div className="error-message" role="alert">
+                  <span>⚠️ {error}</span>
+                </div>
+              )}
+
+              {loading && products.length === 0 && (
+                <div className="loading-skeleton" role="status">
+                  {[...Array(6)].map((_, i) => (
+                    <div key={i} className="skeleton-row" />
+                  ))}
+                </div>
+              )}
+
+              {!loading && filtered.length === 0 && !error && (
+                <p className="empty-state">No products match your filters.</p>
+              )}
+
+              {filtered.length > 0 && (
+                <div className="product-grid">
+                  {filtered.map((p) => (
+                    <article key={p.id} className="product-card">
+                      <div className="product-card-head">
+                        <span className={`badge badge-${({0:'med',1:'vac',2:'acc',3:'toy',4:'feed',5:'groom',6:'hyg',7:'travel'} as Record<number,string>)[p.category] ?? 'acc'}`}>
+                          {categoryLabel(p.category)}
+                        </span>
+                        <span className="product-brand">{p.brand}</span>
+                      </div>
+                      <h3 className="product-name">{p.name}</h3>
+                      <p className="product-desc">{p.description}</p>
+                      <dl className="product-meta">
+                        <div>
+                          <dt>Target</dt>
+                          <dd>{p.targetCondition}</dd>
+                        </div>
+                        <div>
+                          <dt>Dosage</dt>
+                          <dd>{p.dosageInfo}</dd>
+                        </div>
+                        <div>
+                          <dt>In stock</dt>
+                          <dd>{p.stockQuantity}</dd>
+                        </div>
+                      </dl>
+                      <div className="product-footer">
+                        <span className="product-price">${p.price.toFixed(2)}</span>
+                        <button type="button" className="add-btn" disabled={p.stockQuantity === 0}>
+                          {p.stockQuantity === 0 ? 'Out of stock' : 'Add to cart'}
+                        </button>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              )}
+            </div>
+          </section>
+        </main>
+      )}
     </div>
   )
 }
