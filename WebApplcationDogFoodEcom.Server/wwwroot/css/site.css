@@ -58,6 +58,7 @@ body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background
 .badge { padding: 4px 10px; border-radius: 20px; font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; }
 .badge-medicine { background: rgba(99,102,241,.12); color: var(--medicine); }
 .badge-vaccine { background: rgba(14,165,233,.12); color: var(--vaccine); }
+.badge-accessory { background: rgba(16,185,129,.12); color: #10b981; }
 .card-body { padding: 12px 20px 20px; flex: 1; display: flex; flex-direction: column; }
 .card-body h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 4px; }
 .card-body .brand { font-size: .8rem; color: var(--text-muted); margin-bottom: 8px; }

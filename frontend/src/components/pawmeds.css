@@ -214,6 +214,11 @@
   color: #c4b5fd;
 }
 
+.badge-acc {
+  background: rgba(52, 211, 153, 0.18);
+  color: #6ee7b7;
+}
+
 .product-brand {
   color: var(--text-tertiary);
 }

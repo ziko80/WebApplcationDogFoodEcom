@@ -3,7 +3,8 @@ namespace WebApplcationDogFoodEcom.Server.Models;
 public enum ProductCategory
 {
     Medicine,
-    Vaccine
+    Vaccine,
+    Accessory
 }
 
 public class Product

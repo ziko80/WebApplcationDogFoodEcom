@@ -1,9 +1,10 @@
 const API = {
-    products:  '/api/products',
-    medicines: '/api/products/medicines',
-    vaccines:  '/api/products/vaccines',
-    cart:      '/api/cart',
-    orders:    '/api/orders'
+    products:    '/api/products',
+    medicines:   '/api/products/medicines',
+    vaccines:    '/api/products/vaccines',
+    accessories: '/api/products/accessories',
+    cart:        '/api/cart',
+    orders:      '/api/orders'
 };
 
 // ── State ──────────────────────────────────────────
@@ -54,13 +55,14 @@ async function loadProducts(filter, search) {
     let url = API.products;
     if (filter === 'medicines') url = API.medicines;
     else if (filter === 'vaccines') url = API.vaccines;
+    else if (filter === 'accessories') url = API.accessories;
 
-    if (search && filter !== 'medicines' && filter !== 'vaccines') {
+    if (search && filter !== 'medicines' && filter !== 'vaccines' && filter !== 'accessories') {
         url += `?search=${encodeURIComponent(search)}`;
     }
 
     const products = await api(url);
-    const filtered = search && (filter === 'medicines' || filter === 'vaccines')
+    const filtered = search && (filter === 'medicines' || filter === 'vaccines' || filter === 'accessories')
         ? products.filter(p =>
             p.name.toLowerCase().includes(search.toLowerCase()) ||
             p.description.toLowerCase().includes(search.toLowerCase()) ||
@@ -79,8 +81,8 @@ function renderProducts(products) {
     }
 
     productsGrid.innerHTML = products.map(p => {
-        const catClass = p.category === 0 ? 'medicine' : 'vaccine';
-        const catLabel = p.category === 0 ? 'Medicine' : 'Vaccine';
+        const catClass = p.category === 0 ? 'medicine' : p.category === 1 ? 'vaccine' : 'accessory';
+        const catLabel = p.category === 0 ? 'Medicine' : p.category === 1 ? 'Vaccine' : 'Accessory';
         const stockClass = p.stockQuantity < 20 ? 'low' : '';
         return `
         <div class="product-card">

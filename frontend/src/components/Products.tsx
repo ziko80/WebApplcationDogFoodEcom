@@ -6,7 +6,7 @@ interface Product {
   name: string
   description: string
   price: number
-  category: number // 0 = Medicine, 1 = Vaccine
+  category: number // 0 = Medicine, 1 = Vaccine, 2 = Accessory
   brand: string
   imageUrl: string
   stockQuantity: number
@@ -14,7 +14,7 @@ interface Product {
   targetCondition: string
 }
 
-type Filter = 'all' | 'medicine' | 'vaccine'
+type Filter = 'all' | 'medicine' | 'vaccine' | 'accessory'
 
 export default function Products() {
   const [products, setProducts] = useState<Product[]>([])
@@ -45,6 +45,7 @@ export default function Products() {
   const filtered = products.filter((p) => {
     if (filter === 'medicine' && p.category !== 0) return false
     if (filter === 'vaccine' && p.category !== 1) return false
+    if (filter === 'accessory' && p.category !== 2) return false
     if (search.trim()) {
       const q = search.trim().toLowerCase()
       return (
@@ -56,14 +57,14 @@ export default function Products() {
     return true
   })
 
-  const categoryLabel = (c: number) => (c === 0 ? 'Medicine' : 'Vaccine')
+  const categoryLabel = (c: number) => c === 0 ? 'Medicine' : c === 1 ? 'Vaccine' : 'Accessory'
 
   return (
     <div className="app-container">
       <header className="app-header products-header">
         <div>
           <h1 className="app-title">🐾 PawMeds</h1>
-          <p className="app-subtitle">Dog medicines &amp; vaccines</p>
+          <p className="app-subtitle">Pet medicines, vaccines &amp; accessories</p>
         </div>
 
       </header>
@@ -105,6 +106,13 @@ export default function Products() {
                   >
                     Vaccine
                   </button>
+                  <button
+                    type="button"
+                    className={`toggle-option ${filter === 'accessory' ? 'active' : ''}`}
+                    onClick={() => setFilter('accessory')}
+                  >
+                    Accessory
+                  </button>
                 </fieldset>
                 <button
                   type="button"
@@ -140,7 +148,7 @@ export default function Products() {
                 {filtered.map((p) => (
                   <article key={p.id} className="product-card">
                     <div className="product-card-head">
-                      <span className={`badge badge-${p.category === 0 ? 'med' : 'vac'}`}>
+                      <span className={`badge badge-${p.category === 0 ? 'med' : p.category === 1 ? 'vac' : 'acc'}`}>
                         {categoryLabel(p.category)}
                       </span>
                       <span className="product-brand">{p.brand}</span>

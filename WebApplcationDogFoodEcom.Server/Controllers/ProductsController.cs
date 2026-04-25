@@ -33,4 +33,8 @@ public class ProductsController : ControllerBase
     [HttpGet("vaccines")]
     public async Task<ActionResult<IReadOnlyList<Product>>> GetVaccines(CancellationToken ct)
         => Ok(await _service.GetByCategoryAsync(ProductCategory.Vaccine, ct));
+
+    [HttpGet("accessories")]
+    public async Task<ActionResult<IReadOnlyList<Product>>> GetAccessories(CancellationToken ct)
+        => Ok(await _service.GetByCategoryAsync(ProductCategory.Accessory, ct));
 }
